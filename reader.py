@@ -12,9 +12,9 @@ from collections import OrderedDict
 from db_ops import MultiWozDB
 from torch.utils.data import Dataset, DataLoader
 
-from config import global_config as cfg
+#from config import global_config as cfg
 # from config21 import global_config as cfg
-
+from config22 import global_config as cfg
 class _ReaderBase(object):
 
     def __init__(self):

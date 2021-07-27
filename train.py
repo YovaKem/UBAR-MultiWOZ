@@ -19,9 +19,9 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from config import global_config as cfg 
-# from config21 import global_config as cfg  # global, already initialized
-
+#from config import global_config as cfg 
+#from config21 import global_config as cfg  # global, already initialized
+from config22 import global_config as cfg
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -394,7 +394,6 @@ class Modal(object):
         with torch.no_grad():
             eval_pbar = eval_data
             for dial_idx, dialog in enumerate(eval_pbar):
-
                 pv_turn = {}
                 for turn_idx, turn in enumerate(dialog):
                     first_turn = (turn_idx == 0)
@@ -512,7 +511,6 @@ class Modal(object):
         result_collection = {}
         with torch.no_grad():
             for dial_idx, dialog in enumerate(eval_data):
-
                 pv_turn = {}
                 for turn_idx, turn in enumerate(dialog):
                     first_turn = (turn_idx == 0)
@@ -598,6 +596,7 @@ class Modal(object):
         # score
         btm = time.time()
         results, _ = self.reader.wrap_result_lm(result_collection)
+        json.dump(results, open('predictions/localbase-2.2_ckpt_predictions_22.json', 'w'))
         bleu, success, match = self.evaluator.validation_metric(results)
         logging.info("Scoring time: {:.2f} min".format((time.time()-btm)/60))
         score = 0.5 * (success + match) + bleu
@@ -639,7 +638,6 @@ class Modal(object):
         eos_a_id = self.tokenizer.encode(['<eos_a>'])[0]
         eos_r_id = self.tokenizer.encode(['<eos_r>'])[0]
         eos_b_id = self.tokenizer.encode(['<eos_b>'])[0]
-
         # eos_r may not exists if gpt2 generated repetitive words.
         if eos_r_id in generated:
             eos_r_idx = generated.index(eos_r_id)
@@ -773,10 +771,10 @@ def main():
 
         if cfg.context_scheme == 'UBARU':
             m.validate()
-            m.validate('test')
+            #m.validate('test')
         elif cfg.context_scheme == 'URURU':
             m.validate_URURU()
-            m.validate_URURU('test')
+            #m.validate_URURU('test')
 
         # logging.info('Running eavl on test')
         # m.validate('test')

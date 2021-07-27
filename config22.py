@@ -7,9 +7,9 @@ class _Config:
     def _multiwoz_damd_init(self):
         self.gpt_path = 'distilgpt2'
 
-        self.vocab_path_train = './data/multi-woz-processed/vocab'
+        self.vocab_path_train = './data/multi-woz-2.2-processed/vocab'
         self.vocab_path_eval = None
-        self.data_path = './data/multi-woz-processed/'
+        self.data_path = './data/multi-woz-2.2-processed/'
         self.data_file = 'data_for_damd.json'
         self.dev_list = 'data/multi-woz/valListFile.json'
         self.test_list = 'data/multi-woz/testListFile.json'
@@ -44,7 +44,7 @@ class _Config:
 
         # training settings
         self.lr = 1e-4
-        self.warmup_steps = 2000
+        self.warmup_steps = 2000 
         self.weight_decay = 0.0 
         self.gradient_accumulation_steps = 16
         self.batch_size = 2
@@ -77,7 +77,7 @@ class _Config:
         self.context_scheme = 'UBARU' # UBARU or URURU
 
         self.exp_domains = ['all'] # hotel,train, attraction, restaurant, taxi
-        self.log_path = 'logs_test'
+        self.log_path = 'logs2.2'
         self.low_resource = False
         ###
         

@@ -3,7 +3,8 @@ from collections import Counter, OrderedDict
 from nltk.util import ngrams
 
 import ontology
-from config import global_config as cfg
+#from config import global_config as cfg
+from config22 import global_config as cfg
 from clean_dataset import clean_slot_values
 
 

@@ -7,7 +7,8 @@ from torch import nn
 from torch.autograd import Variable
 from torch.distributions import Categorical
 import utils
-from config import global_config as cfg
+#from config import global_config as cfg
+from config22 import global_config as cfg
 
 np.set_printoptions(precision=2,suppress=True)
 

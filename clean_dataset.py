@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 import ontology
+import nltk
 
 def my_clean_text(text):
     text = re.sub(r'([a-zT]+)\.([a-z])', r'\1 . \2', text)   # 'abc.xyz' -> 'abc . xyz'
@@ -11,6 +12,9 @@ def my_clean_text(text):
 def clean_text(text):
     text = text.strip()
     text = text.lower()
+    text = ' '.join(nltk.word_tokenize(text))
+    text = text.replace(' ]' , ']')
+    text = text.replace('[ ', '[')
     text = text.replace(u"’", "'")
     text = text.replace(u"‘", "'")
     text = text.replace(';', ',')
@@ -48,7 +52,6 @@ def clean_text(text):
                                 }
     for tmpl, good in baddata.items():
         text = re.sub(tmpl, good, text)
-
     text = re.sub(r'([a-zT]+)\.([a-z])', r'\1 . \2', text)   # 'abc.xyz' -> 'abc . xyz'
     text = re.sub(r'(\w+)\.\.? ', r'\1 . ', text)   # if 'abc. ' -> 'abc . '
 

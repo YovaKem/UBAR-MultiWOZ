@@ -99,23 +99,23 @@ def preprocess_db(db_paths): # apply clean_slot_values to all dbs
             json.dump(dbs[domain], f, indent=2)
         print('[%s] DB processed! '%domain)
 
-# 2.1
+# 2.2
 class DataPreprocessor(object):
     def __init__(self):
         self.nlp = spacy.load('en_core_web_sm')
         self.db = MultiWozDB(cfg.dbs) # load all processed dbs
         # data_path = 'data/multi-woz/annotated_user_da_with_span_full.json'
-        data_path = 'data/MultiWOZ_2.1/data.json'
+        data_path = 'data/MultiWOZ_2.2/data.json'
         archive = zipfile.ZipFile(data_path + '.zip', 'r')
         self.convlab_data = json.loads(archive.open(data_path.split('/')[-1], 'r').read().lower())
         # self.delex_sg_valdict_path = 'data/multi-woz-processed/delex_single_valdict.json'
         # self.delex_mt_valdict_path = 'data/multi-woz-processed/delex_multi_valdict.json'
         # self.ambiguous_val_path = 'data/multi-woz-processed/ambiguous_values.json'
         # self.delex_refs_path = 'data/multi-woz-processed/reference_no.json'
-        self.delex_sg_valdict_path = 'data/multi-woz-2.1-processed/delex_single_valdict.json'
-        self.delex_mt_valdict_path = 'data/multi-woz-2.1-processed/delex_multi_valdict.json'
-        self.ambiguous_val_path = 'data/multi-woz-2.1-processed/ambiguous_values.json'
-        self.delex_refs_path = 'data/multi-woz-2.1-processed/reference_no.json'
+        self.delex_sg_valdict_path = 'data/multi-woz-2.2-processed/delex_single_valdict.json'
+        self.delex_mt_valdict_path = 'data/multi-woz-2.2-processed/delex_multi_valdict.json'
+        self.ambiguous_val_path = 'data/multi-woz-2.2-processed/ambiguous_values.json'
+        self.delex_refs_path = 'data/multi-woz-2.2-processed/reference_no.json'
         self.delex_refs = json.loads(open(self.delex_refs_path, 'r').read())
         if not os.path.exists(self.delex_sg_valdict_path):
             self.delex_sg_valdict, self.delex_mt_valdict, self.ambiguous_vals = self.get_delex_valdict()
@@ -129,28 +129,49 @@ class DataPreprocessor(object):
 
     def delex_by_annotation(self, dial_turn):
         ## add by yyy in 13:48 0803
-        #u = dial_turn['text'].split()
-        u = my_clean_text(dial_turn['text']).split()
+        u = dial_turn['text']#.split()
+        #u = my_clean_text(dial_turn['text']).split()
         ##
         span = dial_turn['span_info']
+        idx_offset = 0
+        seen_idx = []
         for s in span:
             slot = s[1]
             if slot == 'open':
                 continue
             if ontology.da_abbr_to_slot_name.get(slot):
                 slot = ontology.da_abbr_to_slot_name[slot]
-            for idx in range(s[3], s[4]+1):
-                try: u[idx] = ''
-                except: import pdb; pdb.set_trace()
-            try:
-                u[s[3]] = '[value_'+slot+']'
-            except:
-                u[5] = '[value_'+slot+']'
-        u_delex = ' '.join([t for t in u if t is not ''])
+            if (s[3], s[4]) in seen_idx: 
+              continue
+            else:
+              seen_idx.append((s[3], s[4]))
+            start_idx = s[3] - idx_offset
+            end_idx = s[4] - idx_offset
+            old_last_idx = len(u[:end_idx])
+            new_last_idx = len(u[:start_idx] + '[value_'+slot+']')
+            idx_offset += (old_last_idx - new_last_idx)
+            second_half = u[end_idx:]
+            if len(second_half) and second_half[0] != ' ':
+              if second_half[0].isalpha() or second_half[0].isdigit():
+                second_half = ' -' + second_half
+                idx_offset += -2
+              elif second_half[0] in ['0', '!', '/', '>', '\'','-', ',', ';', '.', '?', ':', '\"', '(', ')']:
+                second_half = ' ' + second_half
+                idx_offset += -1
+              else:
+                print(second_half)
+            if u[start_idx-1] != ' ':
+              infix = ' ' 
+              idx_offset += -1
+            else: 
+              infix = ''
+            u = u[:start_idx] + infix + '[value_'+slot+']' + second_half # u[end_idx:]
+        u_delex = u #' '.join([t for t in u if t is not ''])
         u_delex = u_delex.replace('[value_address] , [value_address] , [value_address]', '[value_address]')
         u_delex = u_delex.replace('[value_address] , [value_address]', '[value_address]')
         u_delex = u_delex.replace('[value_name] [value_name]', '[value_name]')
         u_delex = u_delex.replace('[value_name]([value_phone] )', '[value_name] ( [value_phone] )')
+        if '[value_booktim[value_bookpeople]]' in u: import pdb; pdb.set_trace()
         return u_delex
 
 
@@ -304,7 +325,7 @@ class DataPreprocessor(object):
                 # for user turn, have text
                 # sys turn: text, belief states(metadata), dialog_act, span_info
                 dial_state = dial_turn['metadata']
-                dial_turn['text'] = ' '.join([t.text for t in self.nlp(dial_turn['text'])])
+                #dial_turn['text'] = ' '.join([t.text for t in self.nlp(dial_turn['text'])])
                 if not dial_state:   # user
                     # delexicalize user utterance, either by annotation or by val_dict
                     u = ' '.join(clean_text(dial_turn['text']).split())
@@ -312,14 +333,13 @@ class DataPreprocessor(object):
                         u_delex = clean_text(self.delex_by_annotation(dial_turn))
                     else:
                         u_delex = self.delex_by_valdict(dial_turn['text'])
-
                     single_turn['user'] = u
                     single_turn['user_delex'] = u_delex
 
                 else:   # system
                     # delexicalize system response, either by annotation or by val_dict
                     if 'span_info' in dial_turn and dial_turn['span_info']:
-                        s_delex = clean_text(self.delex_by_annotation(dial_turn))
+                        s_delex = clean_text(self.delex_by_annotation(dial_turn)) 
                     else:
                         if not dial_turn['text']:
                             print(fn)
@@ -333,6 +353,7 @@ class DataPreprocessor(object):
                             constraint_dict[domain] = OrderedDict()
                         info_sv = dial_state[domain]['semi']
                         for s,v in info_sv.items():
+                            v = ' '.join(v)
                             s,v = clean_slot_values(domain, s,v)
                             if len(v.split())>1:
                                 v = ' '.join([token.text for token in self.nlp(v)]).strip()
@@ -342,6 +363,7 @@ class DataPreprocessor(object):
                         for s,v in book_sv.items():
                             if s == 'booked':
                                 continue
+                            v = ' '.join(v)
                             s,v = clean_slot_values(domain, s,v)
                             if len(v.split())>1:
                                 v = ' '.join([token.text for token in self.nlp(v)]).strip()
@@ -466,6 +488,10 @@ class DataPreprocessor(object):
                         for t in single_turn['user'].split() + single_turn['resp'].split() + constraints + sys_act:
                             self.vocab.add_word(t)
                         for t in single_turn['user_delex'].split():
+                            if '],[' in t: 
+                              print(t)
+                              import pdb; pdb.set_trace()
+ 
                             if '[' in t and ']' in t and not t.startswith('[') and not t.endswith(']'):
                                 single_turn['user_delex'].replace(t, t[t.index('['): t.index(']')+1])
                             elif not self.vocab.has_word(t):
@@ -479,10 +505,10 @@ class DataPreprocessor(object):
             # if count == 20:
             #     break
         self.vocab.construct()
-        self.vocab.save_vocab('data/multi-woz-2.1-processed/vocab')
-        with open('data/multi-woz-2.1-analysis/dialog_acts.json', 'w') as f:
+        self.vocab.save_vocab('data/multi-woz-2.2-processed/vocab')
+        with open('data/multi-woz-2.2-analysis/dialog_acts.json', 'w') as f:
             json.dump(ordered_sysact_dict, f, indent=2)
-        with open('data/multi-woz-2.1-analysis/dialog_act_type.json', 'w') as f:
+        with open('data/multi-woz-2.2-analysis/dialog_act_type.json', 'w') as f:
             json.dump(self.unique_da, f, indent=2)
         return data
 
@@ -497,14 +523,14 @@ if __name__=='__main__':
             'taxi': 'db/taxi_db.json',
             'train': 'db/train_db.json',
         }
-    #get_db_values('db/value_set.json') # 
+    # get_db_values('db/value_set.json') # 
     # preprocess_db(db_paths)
-    if not os.path.exists('data/multi-woz-2.1-processed'):
-        os.mkdir('data/multi-woz-2.1-processed')
+    if not os.path.exists('data/multi-woz-2.2-processed'):
+        os.mkdir('data/multi-woz-2.2-processed')
     dh = DataPreprocessor()
     data = dh.preprocess_main()
     
 
-    with open('data/multi-woz-2.1-processed/data_for_damd.json', 'w') as f:
+    with open('data/multi-woz-2.2-processed/data_for_damd.json', 'w') as f:
         json.dump(data, f, indent=2)
 
